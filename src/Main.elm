@@ -31,12 +31,16 @@ import Json.Decode.Pipeline
 ---- MODEL ----
 
 
+type alias Flags =
+    { token : String }
+
+
 type Model
-    = ViewingGroups (List Group) String
-    | ViewingMessages String (List Message) String
+    = ViewingGroups (List Group) ApiToken
+    | ViewingMessages String (List Message) ApiToken
 
 
-init : String -> ( Model, Cmd Msg )
+init : ApiToken -> ( Model, Cmd Msg )
 init token =
     ( ViewingGroups [] token, getGroups token )
 
@@ -68,7 +72,7 @@ type Attachment
     | Emoji { placeholder : String, charMap : List (List Int) }
 
 
-getToken : Model -> String
+getToken : Model -> ApiToken
 getToken model =
     case model of
         ViewingGroups _ token ->
@@ -76,6 +80,10 @@ getToken model =
 
         ViewingMessages _ _ token ->
             token
+
+
+type ApiToken
+    = ApiToken String
 
 
 
@@ -91,6 +99,10 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        apiToken =
+            getToken model
+    in
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -98,7 +110,7 @@ update msg model =
         GotGroups result ->
             case result of
                 Ok { response } ->
-                    ( ViewingGroups response <| getToken model, Cmd.none )
+                    ( ViewingGroups response apiToken, Cmd.none )
 
                 Err error ->
                     let
@@ -110,7 +122,7 @@ update msg model =
         GotMessages groupId result ->
             case result of
                 Ok { response } ->
-                    ( ViewingMessages groupId response <| getToken model, Cmd.none )
+                    ( ViewingMessages groupId response apiToken, Cmd.none )
 
                 Err error ->
                     let
@@ -120,7 +132,7 @@ update msg model =
                     ( model, Cmd.none )
 
         UserSelectedGroup groupId ->
-            ( model, getMessages groupId <| getToken model )
+            ( model, getMessages apiToken groupId )
 
 
 
@@ -166,17 +178,17 @@ messagesUrl groupId =
     groupsUrl ++ "/" ++ groupId ++ "/messages"
 
 
-apiTokenParam : String -> String
-apiTokenParam token =
+apiTokenParam : ApiToken -> String
+apiTokenParam (ApiToken token) =
     "?token=" ++ token
 
 
-urlWithToken : String -> String -> String
+urlWithToken : String -> ApiToken -> String
 urlWithToken url token =
     url ++ apiTokenParam token
 
 
-getGroups : String -> Cmd Msg
+getGroups : ApiToken -> Cmd Msg
 getGroups token =
     Http.get
         { url = urlWithToken groupsUrl token
@@ -197,7 +209,7 @@ groupListDecoder =
         |> required "response" (list groupDecoder)
 
 
-getMessages : String -> String -> Cmd Msg
+getMessages : ApiToken -> String -> Cmd Msg
 getMessages token groupId =
     Http.get
         { url = urlWithToken (messagesUrl groupId) token
@@ -279,11 +291,20 @@ emojiFromResponse placeholder charMap =
 ---- PROGRAM ----
 
 
-main : Program { token : String } Model Msg
+encodeTokenAndInit : Flags -> ( Model, Cmd Msg )
+encodeTokenAndInit { token } =
+    let
+        encodedToken =
+            ApiToken token
+    in
+    init encodedToken
+
+
+main : Program Flags Model Msg
 main =
     Browser.element
         { view = view
-        , init = \{ token } -> init token
+        , init = encodeTokenAndInit
         , update = update
         , subscriptions = always Sub.none
         }
