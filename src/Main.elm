@@ -190,18 +190,36 @@ messagesUrl groupId =
 
 apiTokenParam : ApiToken -> String
 apiTokenParam (ApiToken token) =
-    "?token=" ++ token
+    "token=" ++ token
 
 
-urlWithToken : String -> ApiToken -> String
-urlWithToken url token =
-    url ++ apiTokenParam token
+queryParams : ApiToken -> List ( String, String ) -> String
+queryParams token params =
+    let
+        tokenParam =
+            apiTokenParam token
+
+        otherParams =
+            encodeQueryParams params
+    in
+    "?" ++ tokenParam ++ otherParams
+
+
+encodeQueryParams : List ( String, String ) -> String
+encodeQueryParams params =
+    List.map (\( key, value ) -> "&" ++ key ++ "=" ++ value) params
+        |> String.join ""
+
+
+urlWithQueryParams : String -> ApiToken -> List ( String, String ) -> String
+urlWithQueryParams url token params =
+    url ++ queryParams token params
 
 
 getGroups : ApiToken -> Cmd Msg
 getGroups token =
     Http.get
-        { url = urlWithToken groupsUrl token
+        { url = urlWithQueryParams groupsUrl token []
         , expect = Http.expectJson GotGroups groupListDecoder
         }
 
@@ -222,7 +240,7 @@ groupListDecoder =
 getMessages : ApiToken -> String -> Cmd Msg
 getMessages token groupId =
     Http.get
-        { url = urlWithToken (messagesUrl groupId) token
+        { url = urlWithQueryParams (messagesUrl groupId) token [ ( "limit", "100" ) ]
         , expect = Http.expectJson (GotMessages groupId) messageListDecoder
         }
 
