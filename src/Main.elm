@@ -123,7 +123,11 @@ update msg model =
         GotMessages groupId result ->
             case result of
                 Ok { response } ->
-                    ( ViewingMessages groupId response apiToken, Cmd.none )
+                    let
+                        flippedMessages =
+                            List.reverse response
+                    in
+                    ( ViewingMessages groupId flippedMessages apiToken, Cmd.none )
 
                 Err error ->
                     let
