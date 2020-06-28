@@ -61,7 +61,7 @@ type alias Message =
     , authorName : String
     , avatarUrl : String
     , attachments : List Attachment
-    , favoritesCount : Int
+    , favoritedBy : List String
     }
 
 
@@ -232,7 +232,7 @@ messageDecoder =
         |> required "name" string
         |> required "avatar_url" string
         |> required "attachments" (list attachmentDecoder)
-        |> hardcoded 0
+        |> required "favorited_by" (list string)
 
 
 attachmentDecoder : Decoder Attachment
