@@ -20,6 +20,10 @@ h1 {
   font-size: 30px;
 }
 
+h2 {
+  cursor: pointer;
+}
+
 img {
   margin: 20px 0;
   max-width: 200px;
