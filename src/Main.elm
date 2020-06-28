@@ -95,6 +95,7 @@ type Msg
     | GotGroups (Result Http.Error (GroupMeResponse (List Group)))
     | GotMessages String (Result Http.Error (GroupMeResponse (List Message)))
     | UserSelectedGroup String
+    | UserClickedBackToGroups
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -134,6 +135,9 @@ update msg model =
         UserSelectedGroup groupId ->
             ( model, getMessages apiToken groupId )
 
+        UserClickedBackToGroups ->
+            ( ViewingGroups [] apiToken, getGroups apiToken )
+
 
 
 ---- VIEW ----
@@ -146,7 +150,9 @@ view model =
             div [] <| List.map viewGroup groups
 
         ViewingMessages _ messages _ ->
-            div [] <| List.map viewMessage messages
+            div [] <|
+                [ h1 [ onClick UserClickedBackToGroups ] [ text "Back to groups" ] ]
+                    ++ List.map viewMessage messages
 
 
 viewGroup : Group -> Html Msg
