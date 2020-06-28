@@ -32,13 +32,13 @@ import Json.Decode.Pipeline
 
 
 type Model
-    = ViewingGroups (List Group)
-    | ViewingMessages String (List Message)
+    = ViewingGroups (List Group) String
+    | ViewingMessages String (List Message) String
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( ViewingGroups [], getGroups )
+init : String -> ( Model, Cmd Msg )
+init token =
+    ( ViewingGroups [] token, getGroups token )
 
 
 type alias GroupMeResponse a =
@@ -68,6 +68,16 @@ type Attachment
     | Emoji { placeholder : String, charMap : List (List Int) }
 
 
+getToken : Model -> String
+getToken model =
+    case model of
+        ViewingGroups _ token ->
+            token
+
+        ViewingMessages _ _ token ->
+            token
+
+
 
 ---- UPDATE ----
 
@@ -88,7 +98,7 @@ update msg model =
         GotGroups result ->
             case result of
                 Ok { response } ->
-                    ( ViewingGroups response, Cmd.none )
+                    ( ViewingGroups response <| getToken model, Cmd.none )
 
                 Err error ->
                     let
@@ -100,7 +110,7 @@ update msg model =
         GotMessages groupId result ->
             case result of
                 Ok { response } ->
-                    ( ViewingMessages groupId response, Cmd.none )
+                    ( ViewingMessages groupId response <| getToken model, Cmd.none )
 
                 Err error ->
                     let
@@ -110,7 +120,7 @@ update msg model =
                     ( model, Cmd.none )
 
         UserSelectedGroup groupId ->
-            ( model, getMessages groupId )
+            ( model, getMessages groupId <| getToken model )
 
 
 
@@ -120,10 +130,10 @@ update msg model =
 view : Model -> Html Msg
 view model =
     case model of
-        ViewingGroups groups ->
+        ViewingGroups groups _ ->
             div [] <| List.map viewGroup groups
 
-        ViewingMessages _ messages ->
+        ViewingMessages _ messages _ ->
             div [] <| List.map viewMessage messages
 
 
@@ -156,20 +166,20 @@ messagesUrl groupId =
     groupsUrl ++ "/" ++ groupId ++ "/messages"
 
 
-apiTokenParam : String
-apiTokenParam =
-    Debug.todo "Add your GroupMe API token here: ?token="
+apiTokenParam : String -> String
+apiTokenParam token =
+    "?token=" ++ token
 
 
-urlWithToken : String -> String
-urlWithToken url =
-    url ++ apiTokenParam
+urlWithToken : String -> String -> String
+urlWithToken url token =
+    url ++ apiTokenParam token
 
 
-getGroups : Cmd Msg
-getGroups =
+getGroups : String -> Cmd Msg
+getGroups token =
     Http.get
-        { url = urlWithToken groupsUrl
+        { url = urlWithToken groupsUrl token
         , expect = Http.expectJson GotGroups groupListDecoder
         }
 
@@ -187,10 +197,10 @@ groupListDecoder =
         |> required "response" (list groupDecoder)
 
 
-getMessages : String -> Cmd Msg
-getMessages groupId =
+getMessages : String -> String -> Cmd Msg
+getMessages token groupId =
     Http.get
-        { url = urlWithToken <| messagesUrl groupId
+        { url = urlWithToken (messagesUrl groupId) token
         , expect = Http.expectJson (GotMessages groupId) messageListDecoder
         }
 
@@ -269,11 +279,11 @@ emojiFromResponse placeholder charMap =
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program { token : String } Model Msg
 main =
     Browser.element
         { view = view
-        , init = \_ -> init
+        , init = \{ token } -> init token
         , update = update
         , subscriptions = always Sub.none
         }
