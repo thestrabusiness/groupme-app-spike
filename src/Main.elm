@@ -59,7 +59,7 @@ type alias Message =
     , createdAt : Int
     , text : Maybe String
     , authorName : String
-    , avatarUrl : String
+    , avatarUrl : Maybe String
     , attachments : List Attachment
     , favoritedBy : List String
     }
@@ -279,7 +279,7 @@ messageDecoder =
         |> required "created_at" int
         |> required "text" (nullable string)
         |> required "name" string
-        |> required "avatar_url" string
+        |> required "avatar_url" (nullable string)
         |> required "attachments" (list attachmentDecoder)
         |> required "favorited_by" (list string)
 
