@@ -66,10 +66,31 @@ type alias Message =
 
 
 type Attachment
-    = Image { url : String }
-    | Location { lat : String, lng : String, name : String }
-    | Split { token : String }
-    | Emoji { placeholder : String, charMap : List (List Int) }
+    = Image ImageData
+    | Location LocationData
+    | Split SplitData
+    | Emoji EmojiData
+    | Mention MentionData
+
+
+type alias ImageData =
+    { url : String }
+
+
+type alias LocationData =
+    { lat : String, lng : String, name : String }
+
+
+type alias SplitData =
+    { token : String }
+
+
+type alias EmojiData =
+    { placeholder : String, charMap : List (List Int) }
+
+
+type alias MentionData =
+    { user_ids : List String }
 
 
 getToken : Model -> ApiToken
@@ -265,7 +286,13 @@ messageDecoder =
 
 attachmentDecoder : Decoder Attachment
 attachmentDecoder =
-    oneOf [ imageDecoder, locationDecoder, splitDecoder, emojiDecoder ]
+    oneOf
+        [ imageDecoder
+        , locationDecoder
+        , splitDecoder
+        , emojiDecoder
+        , mentionDecoder
+        ]
 
 
 imageDecoder : Decoder Attachment
@@ -295,24 +322,35 @@ emojiDecoder =
         |> hardcoded []
 
 
+mentionDecoder : Decoder Attachment
+mentionDecoder =
+    succeed mentionFromResponse
+        |> required "user_ids" (list string)
+
+
+mentionFromResponse : List String -> Attachment
+mentionFromResponse =
+    Mention << MentionData
+
+
 imageFromResponse : String -> Attachment
-imageFromResponse url =
-    Image { url = url }
+imageFromResponse =
+    Image << ImageData
 
 
 locationFromResponse : String -> String -> String -> Attachment
 locationFromResponse lat lng name =
-    Location { lat = lat, lng = lng, name = name }
+    Location <| LocationData lat lng name
 
 
 splitFromResponse : String -> Attachment
-splitFromResponse token =
-    Split { token = token }
+splitFromResponse =
+    Split << SplitData
 
 
 emojiFromResponse : String -> List (List Int) -> Attachment
 emojiFromResponse placeholder charMap =
-    Emoji { placeholder = placeholder, charMap = charMap }
+    Emoji <| EmojiData placeholder charMap
 
 
 
