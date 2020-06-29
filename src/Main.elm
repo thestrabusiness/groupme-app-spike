@@ -71,6 +71,11 @@ type Attachment
     | Split SplitData
     | Emoji EmojiData
     | Mention MentionData
+    | File FileData
+
+
+type alias FileData =
+    { id : String }
 
 
 type alias ImageData =
@@ -292,6 +297,7 @@ attachmentDecoder =
         , splitDecoder
         , emojiDecoder
         , mentionDecoder
+        , fileDecoder
         ]
 
 
@@ -328,6 +334,12 @@ mentionDecoder =
         |> required "user_ids" (list string)
 
 
+fileDecoder : Decoder Attachment
+fileDecoder =
+    succeed fileFromResponse
+        |> required "file_id" string
+
+
 mentionFromResponse : List String -> Attachment
 mentionFromResponse =
     Mention << MentionData
@@ -351,6 +363,11 @@ splitFromResponse =
 emojiFromResponse : String -> List (List Int) -> Attachment
 emojiFromResponse placeholder charMap =
     Emoji <| EmojiData placeholder charMap
+
+
+fileFromResponse : String -> Attachment
+fileFromResponse =
+    File << FileData
 
 
 
